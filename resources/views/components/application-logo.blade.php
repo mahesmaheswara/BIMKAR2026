@@ -1,0 +1,1 @@
+<img src="{{ asset('assets/images/logo_bengkod.svg') }}" alt="Logo">
