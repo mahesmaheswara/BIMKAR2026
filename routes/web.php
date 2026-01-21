@@ -1,62 +1,135 @@
 <?php
 
-use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\Admin\DashboardController;
-use App\Http\Controllers\Admin\CategoryController;
-use App\Http\Controllers\Admin\EventController;
-use App\Http\Controllers\Admin\TiketController;
-use App\Http\Controllers\Admin\HistoriesController;
-use App\Http\Controllers\UserEventController;
 
-use App\Models\Kategori;
-use App\Models\Event;
+/*
+|--------------------------------------------------------------------------
+| CONTROLLERS
+|--------------------------------------------------------------------------
+*/
 
+// Admin Controllers
+use App\Http\Controllers\Admin\{
+    DashboardController,
+    CategoryController,
+    EventController,
+    TiketController,
+    HistoriesController,
+    TipeTiketController
+};
 
-//Di atas jangan lupa sertakan HomeController dulu
-use App\Http\Controllers\HomeController;
-use App\Http\Controllers\PemesananController;
+// User / Public Controllers
+use App\Http\Controllers\{
+    HomeController,
+    UserEventController,
+    PemesananController,
+    ProfileController
+};
 
+use App\Http\Controllers\User\OrderController;
 
-// home routes
+/*
+|--------------------------------------------------------------------------
+| PUBLIC ROUTES (TANPA LOGIN)
+|--------------------------------------------------------------------------
+*/
+
+// Homepage
 Route::get('/', [HomeController::class, 'index'])->name('home');
 
-// Event routes
-Route::get('/events/{event}', [UserEventController::class, 'show'])->name('user.events.show');
+// Detail event (user)
+Route::get('/events/{event}', [UserEventController::class, 'show'])
+    ->name('user.events.show');
 
-
+/*
+|--------------------------------------------------------------------------
+| AUTHENTICATED USER ROUTES
+|--------------------------------------------------------------------------
+*/
 Route::middleware('auth')->group(function () {
 
-// User Routes
-    Route::post('/events/{event}/tickets/{tiket}', [UserEventController::class, 'store'])->name('user.events.store');
-    Route::get('/pemesanan', [PemesananController::class, 'index'])->name('pemesanan.index');
-    Route::post('/pemesanan', [PemesananController::class, 'store'])->name('pemesanan.store');
-    Route::get('/riwayat-pemesanan', [PemesananController::class, 'riwayat'])->name('pemesanan.riwayat');
-    Route::get('/riwayat-pemesanan/{order}', [PemesananController::class, 'detail'])->name('pemesanan.detail');
+    // =========================
+    // USER ORDER / PEMESANAN
+    // =========================
+    Route::post('/events/{event}/tickets/{tiket}', [UserEventController::class, 'store'])
+        ->name('user.events.store');
 
-// Admin Routes
-    Route::middleware('admin')->prefix('admin')->name('admin.')->group(function () {
-        Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
+    Route::get('/pemesanan', [PemesananController::class, 'index'])
+        ->name('pemesanan.index');
 
-        // Category Management
-        Route::resource('categories', CategoryController::class);
+    Route::post('/pemesanan', [PemesananController::class, 'store'])
+        ->name('pemesanan.store');
 
-        // Event Management
-        Route::resource('events', EventController::class);
+    Route::get('/riwayat-pemesanan', [PemesananController::class, 'riwayat'])
+        ->name('pemesanan.riwayat');
 
-        // Tiket Management 
-        Route::resource('tickets', TiketController::class);
+    Route::get('/riwayat-pemesanan/{order}', [PemesananController::class, 'detail'])
+        ->name('pemesanan.detail');
 
-        // Histories
-        Route::get('/histories', [HistoriesController::class, 'index'])->name('histories.index');
-        Route::get('/histories/{id}', [HistoriesController::class, 'show'])->name('histories.show');
-    });
+    // =========================
+    // USER ORDERS (ALT VIEW)
+    // =========================
+    Route::get('/orders', [OrderController::class, 'index'])
+        ->name('orders.index');
 
+    Route::get('/orders/{order}', [OrderController::class, 'show'])
+        ->name('orders.show');
 
-    // profile routes
-    Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
-    Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
-    Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+    Route::post('/orders', [OrderController::class, 'store'])
+        ->name('orders.store');
+
+    // =========================
+    // PROFILE
+    // =========================
+    Route::get('/profile', [ProfileController::class, 'edit'])
+        ->name('profile.edit');
+
+    Route::patch('/profile', [ProfileController::class, 'update'])
+        ->name('profile.update');
+
+    Route::delete('/profile', [ProfileController::class, 'destroy'])
+        ->name('profile.destroy');
+
+    /*
+    |--------------------------------------------------------------------------
+    | ADMIN ROUTES
+    |--------------------------------------------------------------------------
+    */
+    Route::middleware('admin')
+        ->prefix('admin')
+        ->name('admin.')
+        ->group(function () {
+
+            // Dashboard
+            Route::get('/', [DashboardController::class, 'index'])
+                ->name('dashboard');
+
+            // =========================
+            // MASTER DATA
+            // =========================
+            Route::resource('categories', CategoryController::class);
+            Route::resource('tipe-tiket', TipeTiketController::class);
+
+            // =========================
+            // EVENT & TICKET
+            // =========================
+            Route::resource('events', EventController::class);
+            Route::resource('tickets', TiketController::class);
+
+            // =========================
+            // HISTORIES
+            // =========================
+            Route::get('/histories', [HistoriesController::class, 'index'])
+                ->name('histories.index');
+
+            Route::get('/histories/{id}', [HistoriesController::class, 'show'])
+                ->name('histories.show');
+        });
 });
 
+/*
+|--------------------------------------------------------------------------
+| AUTH ROUTES (LOGIN, REGISTER, dll)
+|--------------------------------------------------------------------------
+*/
 require __DIR__ . '/auth.php';

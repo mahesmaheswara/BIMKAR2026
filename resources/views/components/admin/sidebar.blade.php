@@ -51,6 +51,23 @@
                 </a>
             </li>
 
+            <!-- Tipe Tiket item -->
+            <li class="{{ request()->routeIs('admin.tipe-tiket.*') ? 'bg-gray-200 rounded-lg' : '' }}">
+                <a href="{{ route('admin.tipe-tiket.index') }}"
+                class="is-drawer-close:tooltip is-drawer-close:tooltip-right"
+                data-tip="Tipe Tiket">
+
+                    <!-- Icon Ticket -->
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
+                        <path fill="currentColor"
+                            d="M4 5h16a2 2 0 0 1 2 2v3a3 3 0 0 0 0 4v3a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-3a3 3 0 0 0 0-4V7a2 2 0 0 1 2-2" />
+                    </svg>
+
+                    <span class="is-drawer-close:hidden">Manajemen Tipe Tiket</span>
+                </a>
+            </li>
+
+
         </ul>
 
         <!-- logout -->
