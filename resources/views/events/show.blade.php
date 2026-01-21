@@ -139,4 +139,54 @@
             </a>
         </div>
     </div>
+    <script>
+// code script lain
+
+document.getElementById('confirmCheckout').addEventListener('click', async () => {
+      const btn = document.getElementById('confirmCheckout');
+      btn.setAttribute('disabled', 'disabled');
+      btn.textContent = 'Memproses...';
+
+      // gather items
+      const items = [];
+      Object.values(tickets).forEach(t => {
+        const qty = Number(document.getElementById('qty-' + t.id).value || 0);
+        if (qty > 0) items.push({ tiket_id: t.id, jumlah: qty });
+      });
+
+      if (items.length === 0) {
+        alert('Tidak ada tiket dipilih');
+        btn.removeAttribute('disabled');
+        btn.textContent = 'Konfirmasi (placeholder)';
+        return;
+      }
+
+      try {
+        const res = await fetch("{{ route('orders.store') }}", {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+          },
+          body: JSON.stringify({ event_id: {{ $event->id }}, items })
+        });
+
+        if (!res.ok) {
+          const text = await res.text();
+          throw new Error(text || 'Gagal membuat pesanan');
+        }
+
+        const data = await res.json();
+        // redirect to orders list
+        window.location.href = data.redirect || '{{ route('orders.index') }}';
+      } catch (err) {
+        console.log(err);
+        alert('Terjadi kesalahan saat memproses pesanan: ' + err.message);
+        btn.removeAttribute('disabled');
+        btn.textContent = 'Konfirmasi (placeholder)';
+      }
+    });
+    
+ </script>
 </x-app-layout>
