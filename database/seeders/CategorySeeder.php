@@ -3,7 +3,6 @@
 namespace Database\Seeders;
 
 use App\Models\Kategori;
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 
 class CategorySeeder extends Seeder
@@ -13,14 +12,22 @@ class CategorySeeder extends Seeder
      */
     public function run(): void
     {
-        $kategoris = [
-            ['nama_kategori' => 'Konser'],
-            ['nama_kategori' => 'Seminar'],
-            ['nama_kategori' => 'Workshop'],
+        $categories = [
+            'Konser Musik',
+            'Seminar',
+            'Workshop',
+            'Festival',
+            'Olahraga',
+            'Pameran',
+            'Teater',
+            'Komedi',
         ];
 
-        foreach ($kategoris as $kategori) {
-            Kategori::create(['nama' => $kategori['nama_kategori']]);
+        foreach ($categories as $name) {
+            Kategori::updateOrCreate(
+                ['nama' => $name],
+                ['nama' => $name]
+            );
         }
     }
 }
