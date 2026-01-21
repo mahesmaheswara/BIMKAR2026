@@ -1,5 +1,30 @@
 <?php
 
+/**
+ * ==========================================================
+ * JUDUL  : TiketController (Manajemen Tiket Event - Admin)
+ * LOKASI : app/Http/Controllers/Admin/TiketController.php
+ * ==========================================================
+ *
+ * FUNGSI:
+ * Controller ini menangani pengelolaan data Tiket
+ * yang terikat langsung dengan sebuah Event.
+ *
+ * UPDATE SISTEM:
+ * - ENUM `tipe` DIHAPUS
+ * - Diganti dengan relasi ke tabel `tipe_tikets`
+ *
+ * TUJUAN:
+ * - Admin dapat menambahkan tiket ke event
+ * - Admin dapat memilih tipe tiket secara DINAMIS
+ * - Admin dapat mengubah harga dan stok tiket
+ * - Admin dapat menghapus tiket
+ *
+ * RELASI DATA:
+ * - Tiket belongsTo Event
+ * - Tiket belongsTo TipeTiket
+ */
+
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
@@ -9,7 +34,11 @@ use Illuminate\Http\Request;
 class TiketController extends Controller
 {
     /**
-     * Display a listing of the resource.
+     * ==================================================
+     * INDEX
+     * ==================================================
+     * Tidak digunakan secara terpisah.
+     * Tiket ditampilkan di halaman detail Event.
      */
     public function index()
     {
@@ -17,7 +46,11 @@ class TiketController extends Controller
     }
 
     /**
-     * Show the form for creating a new resource.
+     * ==================================================
+     * CREATE
+     * ==================================================
+     * Tidak digunakan.
+     * Form tiket tersedia di halaman Event.
      */
     public function create()
     {
@@ -25,25 +58,53 @@ class TiketController extends Controller
     }
 
     /**
-     * Store a newly created resource in storage.
+     * ==================================================
+     * STORE
+     * ==================================================
+     * Menyimpan tiket baru ke database
+     *
+     * INPUT:
+     * - event_id
+     * - tipe_tiket_id
+     * - harga
+     * - stok
      */
     public function store(Request $request)
     {
-        $validatedData = request()->validate([
-            'event_id' => 'required|exists:events,id',
-            'tipe' => 'required|string|max:255',
-            'harga' => 'required|numeric|min:0',
-            'stok' => 'required|integer|min:0',
+        /**
+         * ----------------------------------------------
+         * VALIDASI INPUT
+         * ----------------------------------------------
+         */
+        $validatedData = $request->validate([
+            'event_id'       => 'required|exists:events,id',
+            'tipe_tiket_id'  => 'required|exists:tipe_tikets,id',
+            'harga'          => 'required|numeric|min:0',
+            'stok'           => 'required|integer|min:0',
         ]);
 
-        // Create the ticket
+        /**
+         * ----------------------------------------------
+         * SIMPAN TIKET
+         * ----------------------------------------------
+         */
         Tiket::create($validatedData);
 
-        return redirect()->route('admin.events.show', $validatedData['event_id'])->with('success', 'Ticket berhasil ditambahkan.');
+        /**
+         * ----------------------------------------------
+         * REDIRECT KE DETAIL EVENT
+         * ----------------------------------------------
+         */
+        return redirect()
+            ->route('admin.events.show', $validatedData['event_id'])
+            ->with('success', 'Ticket berhasil ditambahkan.');
     }
 
     /**
-     * Display the specified resource.
+     * ==================================================
+     * SHOW
+     * ==================================================
+     * Tidak digunakan.
      */
     public function show(string $id)
     {
@@ -51,7 +112,11 @@ class TiketController extends Controller
     }
 
     /**
-     * Show the form for editing the specified resource.
+     * ==================================================
+     * EDIT
+     * ==================================================
+     * Tidak digunakan.
+     * Edit dilakukan via modal di halaman Event.
      */
     public function edit(string $id)
     {
@@ -59,32 +124,84 @@ class TiketController extends Controller
     }
 
     /**
-     * Update the specified resource in storage.
+     * ==================================================
+     * UPDATE
+     * ==================================================
+     * Memperbarui data tiket
+     *
+     * INPUT:
+     * - tipe_tiket_id
+     * - harga
+     * - stok
      */
     public function update(Request $request, string $id)
     {
+        /**
+         * ----------------------------------------------
+         * AMBIL DATA TIKET
+         * ----------------------------------------------
+         */
         $ticket = Tiket::findOrFail($id);
 
+        /**
+         * ----------------------------------------------
+         * VALIDASI INPUT
+         * ----------------------------------------------
+         */
         $validatedData = $request->validate([
-            'tipe' => 'required|string|max:255',
-            'harga' => 'required|numeric|min:0',
-            'stok' => 'required|integer|min:0',
+            'tipe_tiket_id' => 'required|exists:tipe_tikets,id',
+            'harga'         => 'required|numeric|min:0',
+            'stok'          => 'required|integer|min:0',
         ]);
 
+        /**
+         * ----------------------------------------------
+         * UPDATE TIKET
+         * ----------------------------------------------
+         */
         $ticket->update($validatedData);
 
-        return redirect()->route('admin.events.show', $ticket->event_id)->with('success', 'Ticket berhasil diperbarui.');
+        /**
+         * ----------------------------------------------
+         * REDIRECT KE DETAIL EVENT
+         * ----------------------------------------------
+         */
+        return redirect()
+            ->route('admin.events.show', $ticket->event_id)
+            ->with('success', 'Ticket berhasil diperbarui.');
     }
 
     /**
-     * Remove the specified resource from storage.
+     * ==================================================
+     * DESTROY
+     * ==================================================
+     * Menghapus tiket dari database
      */
     public function destroy(string $id)
     {
+        /**
+         * ----------------------------------------------
+         * AMBIL DATA TIKET
+         * ----------------------------------------------
+         */
         $ticket = Tiket::findOrFail($id);
+
         $eventId = $ticket->event_id;
+
+        /**
+         * ----------------------------------------------
+         * HAPUS TIKET
+         * ----------------------------------------------
+         */
         $ticket->delete();
 
-        return redirect()->route('admin.events.show', $eventId)->with('success', 'Ticket berhasil dihapus.');
+        /**
+         * ----------------------------------------------
+         * REDIRECT KE DETAIL EVENT
+         * ----------------------------------------------
+         */
+        return redirect()
+            ->route('admin.events.show', $eventId)
+            ->with('success', 'Ticket berhasil dihapus.');
     }
 }
