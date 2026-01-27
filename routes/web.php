@@ -1,5 +1,8 @@
 <?php
 
+use App\Http\Controllers\Admin\PaymentTypeController;
+use App\Http\Controllers\LocationController;
+use App\Http\Controllers\User\CheckoutController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -77,6 +80,13 @@ Route::middleware('auth')->group(function () {
 
     Route::post('/orders', [OrderController::class, 'store'])
         ->name('orders.store');
+    
+    Route::get('/checkout/{event}', [CheckoutController::class, 'index'])
+        ->name('checkout.index');
+
+    Route::post('/pemesanan', [PemesananController::class, 'store'])
+        ->name('pemesanan.store');
+
 
     // =========================
     // PROFILE
@@ -109,7 +119,7 @@ Route::middleware('auth')->group(function () {
             // =========================
             Route::resource('categories', CategoryController::class);
             Route::resource('tipe-tiket', TipeTiketController::class);
-
+            Route::resource('locations', LocationController::class);
             // =========================
             // EVENT & TICKET
             // =========================

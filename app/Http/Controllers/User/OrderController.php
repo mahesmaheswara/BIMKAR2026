@@ -1,294 +1,147 @@
 <?php
 
-/**
- * ==========================================================
- * JUDUL  : OrderController (Pemesanan Tiket - User)
- * LOKASI : app/Http/Controllers/User/OrderController.php
- * ==========================================================
- *
- * FUNGSI:
- * Controller ini menangani seluruh proses pemesanan tiket
- * oleh user, mulai dari:
- * - Melihat riwayat pesanan
- * - Melihat detail pesanan
- * - Membuat pesanan baru (checkout via AJAX)
- *
- * TUJUAN:
- * - Memastikan proses order berjalan aman dan konsisten
- * - Mengurangi stok tiket secara real-time
- * - Menyimpan order dan detail order ke database
- *
- * CATATAN PENTING:
- * - Proses checkout menggunakan AJAX (fetch API)
- * - Menggunakan Database Transaction
- * - Menggunakan lockForUpdate() untuk mencegah bentrok stok
- *
- * KAMUS UMUM:
- * - Order        : Data utama pemesanan tiket
- * - DetailOrder  : Detail tiket dalam satu order
- * - Tiket        : Tiket event (stok & harga)
- * - Transaction  : Proses database atomik (all or nothing)
- */
-
 namespace App\Http\Controllers\User;
 
-// Controller dasar Laravel
 use App\Http\Controllers\Controller;
-
-// Model DetailOrder (tabel detail_orders)
 use App\Models\DetailOrder;
-
-// Model Order (tabel orders)
 use App\Models\Order;
-
-// Model Tiket (tabel tikets)
 use App\Models\Tiket;
-
-// Carbon untuk manipulasi tanggal & waktu
+use App\Models\PaymentType;
 use Carbon\Carbon;
-
-// Request standar Laravel
 use Illuminate\Http\Request;
-
-// Facade Auth untuk mengambil user login
 use Illuminate\Support\Facades\Auth;
-
-// Facade DB untuk database transaction
 use Illuminate\Support\Facades\DB;
 
 class OrderController extends Controller
 {
     /**
      * ==================================================
-     * [METHOD] index()
+     * INDEX
      * ==================================================
-     * FUNGSI:
-     * - Menampilkan riwayat pesanan user
-     *
-     * TUJUAN:
-     * - User dapat melihat semua pesanan yang pernah dibuat
-     *
-     * TIPE:
-     * - READ (R dalam CRUD)
+     * Menampilkan riwayat pesanan user
      */
     public function index()
     {
-        /**
-         * ----------------------------------------------
-         * AMBIL USER YANG LOGIN
-         * ----------------------------------------------
-         * Fallback ke user pertama digunakan hanya
-         * untuk keperluan testing / development
-         */
         $user = Auth::user() ?? \App\Models\User::first();
 
-        /**
-         * ----------------------------------------------
-         * AMBIL DATA ORDER USER
-         * ----------------------------------------------
-         * - Filter berdasarkan user_id
-         * - with('event') → eager loading relasi event
-         * - orderBy desc → pesanan terbaru di atas
-         */
         $orders = Order::where('user_id', $user->id)
-            ->with('event')
-            ->orderBy('created_at', 'desc')
+            ->with(['event', 'paymentType'])
+            ->orderByDesc('created_at')
             ->get();
 
-        /**
-         * ----------------------------------------------
-         * KIRIM DATA KE VIEW
-         * ----------------------------------------------
-         * View:
-         * resources/views/orders/index.blade.php
-         */
         return view('orders.index', compact('orders'));
     }
 
     /**
      * ==================================================
-     * [METHOD] show(Order $order)
+     * CREATE (CHECKOUT PAGE)
      * ==================================================
-     * FUNGSI:
-     * - Menampilkan detail satu pesanan
-     *
-     * TUJUAN:
-     * - User dapat melihat tiket apa saja yang dibeli
-     * - Menampilkan subtotal dan total harga
-     *
-     * TIPE:
-     * - READ (R dalam CRUD)
-     *
-     * CATATAN:
-     * - Menggunakan Route Model Binding
+     * Menampilkan halaman checkout
+     */
+    public function create()
+    {
+        $paymentTypes = PaymentType::orderBy('nama')->get();
+
+        return view('orders.checkout', compact('paymentTypes'));
+    }
+
+    /**
+     * ==================================================
+     * SHOW
+     * ==================================================
+     * Menampilkan detail satu pesanan
      */
     public function show(Order $order)
     {
-        /**
-         * ----------------------------------------------
-         * LOAD RELASI ORDER
-         * ----------------------------------------------
-         * - detailOrders → daftar tiket dalam order
-         * - tiket        → detail tiket
-         * - event        → event terkait
-         */
         $order->load(
             'detailOrders.tiket',
-            'event'
+            'event',
+            'paymentType'
         );
 
-        /**
-         * ----------------------------------------------
-         * KIRIM DATA KE VIEW
-         * ----------------------------------------------
-         * View:
-         * resources/views/orders/show.blade.php
-         */
         return view('orders.show', compact('order'));
     }
 
     /**
      * ==================================================
-     * [METHOD] store(Request $request)
+     * STORE (AJAX CHECKOUT)
      * ==================================================
-     * FUNGSI:
-     * - Menyimpan pesanan baru
-     *
-     * TUJUAN:
-     * - Memproses checkout tiket dari frontend
-     * - Mengurangi stok tiket
-     *
-     * TIPE:
-     * - CREATE (C dalam CRUD)
-     *
-     * CATATAN:
-     * - Dipanggil menggunakan AJAX (fetch API)
-     * - Mengembalikan response JSON
+     * Menyimpan pesanan baru
      */
     public function store(Request $request)
     {
-        /**
-         * ----------------------------------------------
-         * VALIDASI DATA CHECKOUT
-         * ----------------------------------------------
-         * Struktur data:
-         * {
-         *   event_id: number,
-         *   items: [
-         *     { tiket_id: number, jumlah: number }
-         *   ]
-         * }
-         */
+        // 1. Validasi data dari checkout
         $data = $request->validate([
-            'event_id'         => 'required|exists:events,id',
-            'items'            => 'required|array|min:1',
-            'items.*.tiket_id' => 'required|integer|exists:tikets,id',
-            'items.*.jumlah'   => 'required|integer|min:1',
+            'event_id'        => 'required|exists:events,id',
+            'payment_type_id' => 'required|exists:payment_types,id',
         ]);
 
-        /**
-         * ----------------------------------------------
-         * AMBIL USER YANG LOGIN
-         * ----------------------------------------------
-         */
-        $user = Auth::user();
+        // 2. Ambil data checkout dari session
+        $checkout = session('checkout');
+
+        if (
+            !$checkout ||
+            empty($checkout['items']) ||
+            $checkout['event_id'] != $data['event_id']
+        ) {
+            return response()->json([
+                'ok' => false,
+                'message' => 'Data checkout tidak valid atau sudah kedaluwarsa.'
+            ], 422);
+        }
+
+        $items = $checkout['items'];
+        $user  = auth()->user();
 
         try {
-            /**
-             * ==========================================
-             * DATABASE TRANSACTION
-             * ==========================================
-             * Semua proses di dalam transaction:
-             * - Jika satu gagal → semua dibatalkan
-             * - Menjamin konsistensi data
-             */
-            $order = DB::transaction(function () use ($data, $user) {
+            $order = \DB::transaction(function () use ($items, $data, $user) {
 
                 $total = 0;
 
-                /**
-                 * --------------------------------------
-                 * VALIDASI STOK & HITUNG TOTAL
-                 * --------------------------------------
-                 * lockForUpdate():
-                 * - Mengunci baris tiket
-                 * - Mencegah dua user membeli stok sama
-                 */
-                foreach ($data['items'] as $it) {
-                    $t = Tiket::lockForUpdate()
+                // 3. Validasi stok + hitung total
+                foreach ($items as $it) {
+                    $tiket = \App\Models\Tiket::lockForUpdate()
                         ->findOrFail($it['tiket_id']);
 
-                    if ($t->stok < $it['jumlah']) {
+                    if ($tiket->stok < $it['jumlah']) {
                         throw new \Exception(
-                            "Stok tidak cukup untuk tipe: {$t->tipe}"
+                            "Stok tidak cukup untuk tiket {$tiket->tipe}"
                         );
                     }
 
-                    // Hitung total harga
-                    $total += ($t->harga ?? 0) * $it['jumlah'];
+                    $total += ($tiket->harga ?? 0) * $it['jumlah'];
                 }
 
-                /**
-                 * --------------------------------------
-                 * BUAT DATA ORDER
-                 * --------------------------------------
-                 */
-                $order = Order::create([
-                    'user_id'      => $user->id,
-                    'event_id'     => $data['event_id'],
-                    'order_date'   => Carbon::now(),
-                    'total_harga'  => $total,
+                // 4. Buat order
+                $order = \App\Models\Order::create([
+                    'user_id'         => $user->id,
+                    'event_id'        => $data['event_id'],
+                    'payment_type_id' => $data['payment_type_id'],
+                    'order_date'      => now(),
+                    'total_harga'     => $total,
                 ]);
 
-                /**
-                 * --------------------------------------
-                 * SIMPAN DETAIL ORDER & KURANGI STOK
-                 * --------------------------------------
-                 */
-                foreach ($data['items'] as $it) {
-                    $t = Tiket::findOrFail($it['tiket_id']);
+                // 5. Simpan detail order + kurangi stok
+                foreach ($items as $it) {
+                    $tiket = \App\Models\Tiket::findOrFail($it['tiket_id']);
 
-                    $subtotal = ($t->harga ?? 0) * $it['jumlah'];
-
-                    // Simpan detail order
-                    DetailOrder::create([
-                        'order_id'        => $order->id,
-                        'tiket_id'        => $t->id,
-                        'jumlah'          => $it['jumlah'],
-                        'subtotal_harga'  => $subtotal,
+                    \App\Models\DetailOrder::create([
+                        'order_id'       => $order->id,
+                        'tiket_id'       => $tiket->id,
+                        'jumlah'         => $it['jumlah'],
+                        'subtotal_harga' => ($tiket->harga ?? 0) * $it['jumlah'],
                     ]);
 
-                    /**
-                     * Kurangi stok tiket
-                     * max(0, ...) → mencegah stok minus
-                     */
-                    $t->stok = max(0, $t->stok - $it['jumlah']);
-                    $t->save();
+                    $tiket->stok -= $it['jumlah'];
+                    $tiket->save();
                 }
 
                 return $order;
             });
 
-            /**
-             * ----------------------------------------------
-             * FLASH MESSAGE
-             * ----------------------------------------------
-             * Digunakan agar pesan sukses muncul
-             * setelah redirect
-             */
-            session()->flash(
-                'success',
-                'Pesanan berhasil dibuat.'
-            );
+            // 6. HAPUS SESSION CHECKOUT (PENTING)
+            session()->forget('checkout');
 
-            /**
-             * ----------------------------------------------
-             * RESPONSE JSON (UNTUK AJAX)
-             * ----------------------------------------------
-             * - ok       : status berhasil
-             * - order_id : ID pesanan
-             * - redirect : URL tujuan setelah checkout
-             */
             return response()->json([
                 'ok'       => true,
                 'order_id' => $order->id,
@@ -296,17 +149,11 @@ class OrderController extends Controller
             ]);
 
         } catch (\Exception $e) {
-            /**
-             * ----------------------------------------------
-             * HANDLE ERROR
-             * ----------------------------------------------
-             * Jika stok tidak cukup atau error lain,
-             * frontend akan menerima pesan error
-             */
             return response()->json([
                 'ok'      => false,
                 'message' => $e->getMessage(),
             ], 422);
         }
     }
+
 }

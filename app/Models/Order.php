@@ -31,6 +31,7 @@ namespace App\Models;
 
 // Model dasar Eloquent
 use Illuminate\Database\Eloquent\Model;
+use App\Models\PaymentType;
 
 class Order extends Model
 {
@@ -43,11 +44,13 @@ class Order extends Model
      * - $order->update()
      */
     protected $fillable = [
-        'user_id',       // User yang melakukan pemesanan
-        'event_id',      // Event yang dipesan
-        'order_date',    // Waktu pemesanan
-        'total_harga',   // Total harga seluruh tiket
+        'user_id',
+        'event_id',
+        'payment_type_id',
+        'order_date',
+        'total_harga',
     ];
+
 
     /**
      * ==================================================
@@ -142,4 +145,9 @@ class Order extends Model
             DetailOrder::class
         );
     }
+
+    public function paymentType()
+{
+    return $this->belongsTo(PaymentType::class);
+}
 }

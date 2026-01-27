@@ -11,7 +11,8 @@
                 <h2 class="card-title">{{ $tiket->event->judul }}</h2>
 
                 <p class="text-sm text-gray-600">
-                    Tipe Tiket: <span class="font-medium">{{ ucfirst($tiket->tipe) }}</span>
+                    Tipe Tiket:
+                    <span class="font-medium">{{ ucfirst($tiket->tipe) }}</span>
                 </p>
 
                 <p class="text-sm text-gray-600">
@@ -29,13 +30,13 @@
             </div>
         </div>
 
-        {{-- Form Pemesanan --}}
+        {{-- FORM PEMESANAN --}}
         <form method="POST" action="{{ route('pemesanan.store') }}">
             @csrf
 
             <input type="hidden" name="tiket_id" value="{{ $tiket->id }}">
 
-            {{-- Jumlah --}}
+            {{-- Jumlah Tiket --}}
             <div class="mb-4">
                 <label class="label">
                     <span class="label-text">Jumlah Tiket</span>
@@ -70,14 +71,14 @@
                 </div>
             </div>
 
-            {{-- Submit --}}
-            <button type="submit" class="btn btn-primary w-full">
-                Konfirmasi Pemesanan
+            {{-- Konfirmasi --}}
+            <button class="btn btn-primary w-full">
+                Konfirmasi Pesanan
             </button>
         </form>
     </div>
 
-    {{-- Script hitung total --}}
+    {{-- SCRIPT HITUNG TOTAL (AMAN, TANPA LOGIC FLOW) --}}
     <script>
     (function () {
         const price = {{ (int) $tiket->harga }};
@@ -85,11 +86,12 @@
         const priceText = document.getElementById('priceText');
         const totalText = document.getElementById('totalText');
 
-        const formatIDR = (n) => new Intl.NumberFormat('id-ID', {
-            style: 'currency',
-            currency: 'IDR',
-            maximumFractionDigits: 0
-        }).format(n);
+        const formatIDR = (n) =>
+            new Intl.NumberFormat('id-ID', {
+                style: 'currency',
+                currency: 'IDR',
+                maximumFractionDigits: 0
+            }).format(n);
 
         const update = () => {
             let qty = parseInt(qtyInput.value || 1, 10);

@@ -36,14 +36,38 @@
                             value="{{ $event->tanggal_waktu->format('Y-m-d\TH:i') }}" required />
                     </div>
 
-                    <!-- Lokasi -->
+                    <!-- Lokasi Event -->
                     <div class="form-control">
                         <label class="label">
-                            <span class="label-text font-semibold">Lokasi</span>
+                            <span class="label-text font-semibold">Lokasi Event</span>
+                            </span>
                         </label>
-                        <input type="text" name="lokasi" placeholder="Contoh: Stadion Utama"
-                            class="input input-bordered w-full" value="{{ $event->lokasi }}" required />
+
+                        <select
+                            name="location_id"
+                            class="select select-bordered w-full"
+                            required>
+                            <option value="">— Pilih Lokasi —</option>
+
+                            @foreach ($locations as $location)
+                                <option value="{{ $location->id }}">
+                                    {{ $location->nama_lokasi }}
+                                </option>
+                            @endforeach
+                        </select>
+
+                        <label class="label">
+                            <span class="label-text-alt text-sm">
+                                Tidak menemukan lokasi?
+                                <a href="{{ route('admin.locations.create') }}"
+                                class="text-blue-600 hover:underline"
+                                target="_blank">
+                                    Tambah lokasi baru
+                                </a>
+                            </span>
+                        </label>
                     </div>
+
 
                     <!-- Kategori -->
                     <div class="form-control">

@@ -1,34 +1,91 @@
 <x-layouts.app>
-  <section class="max-w-6xl mx-auto py-12 px-6">
-    <div class="flex items-center justify-between mb-6">
-      <h1 class="text-2xl font-bold">Riwayat Pembelian</h1>
-    </div>
+<section class="max-w-3xl mx-auto py-12 px-6">
+    <h1 class="text-2xl font-bold mb-6">Checkout</h1>
 
-    <div class="space-y-4">
-      @forelse($orders as $order)
-        <article class="card lg:card-side bg-base-100 shadow-md overflow-hidden">
-          <figure class="lg:w-48">
-            <img
-              src="{{ $order->event?->gambar ? asset($order->event->gambar) : 'https://img.daisyui.com/images/stock/photo-1606107557195-0e29a4b5b4aa.webp' }}"
-              alt="{{ $order->event?->judul ?? 'Event' }}" class="w-full h-full object-cover" />
-          </figure>
+    <form id="checkoutForm" class="space-y-6">
+        @csrf
 
-          <div class="card-body flex justify-between ">
-            <div>
-              <div class="font-bold">Order #{{ $order->id }}</div>
-              <div class="text-sm text-gray-500 mt-1">{{ $order->order_date->translatedFormat('d F Y, H:i') }}</div>
-              <div class="text-sm mt-2">{{ $order->event?->judul ?? 'Event' }}</div>
+        {{-- Event Info --}}
+        <div class="card bg-base-100 shadow p-6 space-y-2">
+            <h2 class="font-semibold text-lg">
+                {{ $event->judul }}
+            </h2>
+
+            <p class="text-sm text-gray-500">
+                {{ $event->location?->nama_lokasi ?? '-' }}
+            </p>
+        </div>
+
+        {{-- Hidden Event ID --}}
+        <input type="hidden" name="event_id" value="{{ $event->id }}">
+
+        {{-- Metode Pembayaran --}}
+        <div class="card bg-base-100 shadow p-6 space-y-4">
+            <div class="form-control">
+                <label class="label">
+                    <span class="label-text font-semibold">
+                        Metode Pembayaran
+                    </span>
+                </label>
+
+                <select name="payment_type_id"
+                        id="payment_type_id"
+                        class="select select-bordered w-full"
+                        required>
+                    <option value="">Pilih metode pembayaran</option>
+                    @foreach ($paymentTypes as $pt)
+                        <option value="{{ $pt->id }}">
+                            {{ $pt->nama }}
+                        </option>
+                    @endforeach
+                </select>
             </div>
 
-            <div class="text-right">
-              <div class="font-bold text-lg">Rp {{ number_format($order->total_harga, 0, ',', '.') }}</div>
-              <a href="{{ route('orders.show', $order) }}" class="btn btn-primary mt-3 text-white">Lihat Detail</a>
-            </div>
-          </div>
-        </article>
-      @empty
-        <div class="alert alert-info">Anda belum memiliki pesanan.</div>
-      @endforelse
-    </div>
-  </section>
+            <button type="submit"
+                    id="btnCheckout"
+                    class="btn btn-primary w-full text-white">
+                Bayar & Buat Pesanan
+            </button>
+        </div>
+    </form>
+</section>
+
+{{-- Script Checkout --}}
+<script>
+document.getElementById('checkoutForm').addEventListener('submit', async function (e) {
+    e.preventDefault();
+
+    const form = e.target;
+    const btn  = document.getElementById('btnCheckout');
+
+    btn.disabled = true;
+    btn.textContent = 'Memproses...';
+
+    const formData = new FormData(form);
+
+    try {
+        const res = await fetch("{{ route('orders.store') }}", {
+            method: 'POST',
+            headers: {
+                'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                'Accept': 'application/json',
+            },
+            body: formData,
+        });
+
+        const data = await res.json();
+
+        if (!res.ok || !data.ok) {
+            throw new Error(data.message || 'Gagal membuat pesanan');
+        }
+
+        window.location.href = data.redirect;
+
+    } catch (err) {
+        alert(err.message);
+        btn.disabled = false;
+        btn.textContent = 'Bayar & Buat Pesanan';
+    }
+});
+</script>
 </x-layouts.app>

@@ -39,6 +39,23 @@
                     <span class="is-drawer-close:hidden">History Pembelian</span>
                 </a>
             </li>
+            <!-- Tipe Pembayaran -->
+            <li class="{{ request()->routeIs('admin.payment-types.*') ? 'bg-gray-200 rounded-lg' : '' }}">
+                <a href="{{ route('admin.payment-types.index') }}"
+                class="is-drawer-close:tooltip is-drawer-close:tooltip-right"
+                data-tip="Tipe Pembayaran">
+
+                    <!-- Icon Credit Card -->
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
+                        <path fill="currentColor"
+                            d="M21 4H3a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h18a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2zm0 4H3V6h18v2z"/>
+                    </svg>
+
+                    <span class="is-drawer-close:hidden">
+                        Manajemen Tipe Pembayaran
+                    </span>
+                </a>
+            </li>
 
             <!-- Kategori item -->
             <li class="{{ request()->routeIs('admin.categories.*') ? 'bg-gray-200 rounded-lg' : '' }}">
@@ -66,6 +83,23 @@
                     <span class="is-drawer-close:hidden">Manajemen Tipe Tiket</span>
                 </a>
             </li>
+
+            <!-- Lokasi item -->
+            <li class="{{ request()->routeIs('admin.locations.*') ? 'bg-gray-200 rounded-lg' : '' }}">
+                <a href="{{ route('admin.locations.index') }}"
+                class="is-drawer-close:tooltip is-drawer-close:tooltip-right"
+                data-tip="Lokasi">
+
+                    <!-- Icon Lokasi -->
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
+                        <path fill="currentColor"
+                            d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5S10.62 6.5 12 6.5s2.5 1.12 2.5 2.5S13.38 11.5 12 11.5z"/>
+                    </svg>
+
+                    <span class="is-drawer-close:hidden">Manajemen Lokasi</span>
+                </a>
+            </li>
+
 
 
         </ul>
